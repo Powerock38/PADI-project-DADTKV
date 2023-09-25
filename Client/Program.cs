@@ -1,2 +1,3 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+﻿using client;
+
+var client = new Client("../../../DADTKV_client_script_sample.txt");
