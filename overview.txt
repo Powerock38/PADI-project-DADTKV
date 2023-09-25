@@ -1,0 +1,46 @@
+Tier 1: Client Applications
+---------------------------
+   |
+   | Submit Transactions: 
+   | - Read: Set of DadInts
+   | - Write: Set of DadInts
+   v
+Tier 2: Transaction Managers
+---------------------------
+   |
+   | Process Transactions:
+   | - Execute Read Operations
+   | - Execute Write Operations
+   | - Return Read Values (after durability)
+   |
+   | Manage Leases:
+   | - Check for Required Leases
+   | - Acquire Leases from Lease Managers (if needed)
+   | - Release Leases (if conflicting)
+   | - Sequential Execution of Transactions (single thread)
+   |
+   | Handle Lease Conflicts:
+   | - Forcibly Free Leases on Crashed TM
+   | - Reestablish Consistent State
+   |
+   | Handle Server Failures:
+   | - Crash Transition via Control Interface
+   | - Maintain "Suspected" or "Not-Suspected" Flags
+   | - Clock Synchronization for Time Slots
+   v
+Tier 3: Lease Manager Servers
+---------------------------
+   |
+   | Manage Leases:
+   | - Order Lease Requests
+   | - Execute Paxos Algorithm (Epoch i)
+   | - Propose List of Leases for Each Epoch
+   | - Assign Leases to Transaction Managers
+   | - Handle Lease Requests (asynchronously)
+   | - Paxos Algorithm for Lease Assignment
+   | - Consensus Instance Order Number and Leases for Each Epoch
+   |
+   | Handle Server Failures:
+   | - Crash Transition via Control Interface
+   | - Maintain "Suspected" or "Not-Suspected" Flags
+   | - Clock Synchronization for Time Slots
