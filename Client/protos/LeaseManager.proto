@@ -1,6 +1,7 @@
 ﻿syntax = "proto3";
 
-package leasemanager;
+package LeaseManager;
+
 
 service LeaseManagerService {
   // Request leases for a set of DadInts.

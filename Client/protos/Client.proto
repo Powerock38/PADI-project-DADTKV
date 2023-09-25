@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package client;
+package Client;
 
 service ClientService {
   // Submit a transaction request.

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package transactionmanager;
+package TransactionManager;
 
-import "leasemanager/leasemanager.proto";  // Import LeaseManager's proto file.
+import "LeaseManager/LeaseManager.proto";  // Import LeaseManager's proto file.
 
 service TransactionManagerService {
   // Execute a transaction, including read and write operations.
@@ -31,7 +31,7 @@ message DadInt {
 }
 
 // Define Lease-related messages (from LeaseManager.proto).
-import "leasemanager/leasemanager.proto";
+import "LeaseManager/LeaseManager.proto";
 
 // Define messages for lease request and response.
 message LeaseRequest {
