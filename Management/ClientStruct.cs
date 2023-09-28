@@ -1,9 +1,9 @@
-namespace SharedLib;
+namespace Management;
 
 public struct ClientStruct
 {
-    private string name { get; }
-    private string script { get; }
+    public string name { get; }
+    public string script { get; }
     
     public ClientStruct(string name, string script)
     {

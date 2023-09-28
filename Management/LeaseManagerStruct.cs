@@ -1,9 +1,9 @@
-namespace SharedLib;
+namespace Management;
 
 public class LeaseManagerStruct
 {
-    private string name { get; }
-    private string url { get; }
+    public string name { get; }
+    public string url { get; }
     
     public LeaseManagerStruct(string name, string url)
     {

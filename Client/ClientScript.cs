@@ -2,10 +2,13 @@ using System.Text.RegularExpressions;
 
 namespace client;
 
-public class Client
+public partial class ClientScript
 {
-    private const string readKeysPattern = """\(("([^"]+)"(?:,"([^"]+)")*)?\)""";
-    private const string writeKeyValuePattern = """("([^"]*)",(\d+))""";
+    [GeneratedRegex("(\"([^\"]*)\",(\\d+))")]
+    private static partial Regex writeKeyValuePattern();
+
+    [GeneratedRegex("\\((\"([^\"]+)\"(?:,\"([^\"]+)\")*)?\\)")]
+    private static partial Regex readKeysPattern();
 
     private enum ClientScriptCommands
     {
@@ -14,7 +17,7 @@ public class Client
         Wait = 'W',
     }
 
-    public Client(string scriptPath)
+    public ClientScript(string scriptPath)
     {
         IEnumerable<string> lines = File.ReadLines(scriptPath);
 
@@ -32,7 +35,7 @@ public class Client
                 case ClientScriptCommands.Transaction:
                     string readKeysString = args[1];
 
-                    List<string> readKeys = Regex.Matches(readKeysString, readKeysPattern)
+                    List<string> readKeys = readKeysPattern().Matches(readKeysString)
                         .Select(match => match.Groups[1].Value).ToList();
 
                     string writeKeysString = args[2].Trim('(', ')');
@@ -45,7 +48,7 @@ public class Client
                         .Where(input => input != "")
                         .Select(input =>
                         {
-                            Match match = Regex.Matches(input, writeKeyValuePattern)[0];
+                            Match match = writeKeyValuePattern().Matches(input)[0];
                             return new DadInt
                                 { key = match.Groups[2].Value, value = int.Parse(match.Groups[3].Value) };
                         }).ToList();
@@ -64,9 +67,5 @@ public class Client
                     throw new Exception("Invalid script line: " + line);
             }
         }
-    }
-
-    public void run()
-    {
     }
 }

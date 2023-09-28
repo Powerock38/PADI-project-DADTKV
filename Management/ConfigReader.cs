@@ -1,4 +1,4 @@
-namespace SharedLib;
+namespace Management;
 
 public class ConfigReader
 {
@@ -12,13 +12,13 @@ public class ConfigReader
         FailureDetection = 'F',
     }
 
-    private List<TransactionManagerStruct> transactionManagers { get; }
-    private List<LeaseManagerStruct> leaseManagers { get; }
-    private List<ClientStruct> clients { get; }
+    public List<TransactionManagerStruct> transactionManagers { get; }
+    public List<LeaseManagerStruct> leaseManagers { get; }
+    public List<ClientStruct> clients { get; }
 
-    private uint systemDuration { get; }
-    private TimeSpan tStart { get; }
-    private uint durationSlot { get; }
+    public uint systemDuration { get; }
+    public TimeSpan tStart { get; }
+    public uint durationSlot { get; }
 
     public ConfigReader(string configFilePath)
     {
@@ -85,8 +85,6 @@ public class ConfigReader
                 default:
                     throw new Exception("Invalid config line: " + line);
             }
-
-            ;
         }
     }
 }

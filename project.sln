@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager", "Trans
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeaseManager", "LeaseManager\LeaseManager.csproj", "{9D2517EC-669E-421E-A88F-E862B05AAEDE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedLib", "SharedLib\SharedLib.csproj", "{72F8E78F-97CC-4D15-BAC1-92E5533CFA6D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Management", "Management\Management.csproj", "{72F8E78F-97CC-4D15-BAC1-92E5533CFA6D}"
 EndProject
 Global
 	GlobalSection(SolutionProperties) = preSolution
