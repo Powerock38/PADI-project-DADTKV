@@ -1,3 +1,1 @@
-﻿using client;
-
-var client = new Client("../../../DADTKV_client_script_sample.txt");
+﻿var cl = new client.Client("../../../DADTKV_client_script_sample.txt");

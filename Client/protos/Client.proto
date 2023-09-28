@@ -1,23 +1,11 @@
 syntax = "proto3";
 
-package Client;
+package Dadtkv;
+
+import "protos/DadInt.proto";
+import "protos/TransactionManager.proto";
 
 service ClientService {
   // Submit a transaction request.
   rpc SubmitTransaction(TransactionRequest) returns (TransactionResponse);
-}
-
-message TransactionRequest {
-  repeated string read_dadints = 1;
-  repeated string write_dadints = 2;
-}
-
-message TransactionResponse {
-  repeated DadInt read_values = 1;
-  // Add any additional fields as needed.
-}
-
-message DadInt {
-  string key = 1;
-  int32 value = 2;
 }

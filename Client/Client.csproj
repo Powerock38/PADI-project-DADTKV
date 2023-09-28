@@ -9,8 +9,9 @@
 
   <ItemGroup>
 	<Protobuf Include="protos/Client.proto" GrpcServices="Client" />
-	<Protobuf Include="protos/LeaseManager.proto" GrpcServices="Server" />
-	<Protobuf Include="protos/TransactionManager.proto" GrpcServices="Server" />
+	<Protobuf Include="protos/LeaseManager.proto" GrpcServices="LeaseManager" />
+	<Protobuf Include="protos/TransactionManager.proto" GrpcServices="TransactionManager" />
+	<Protobuf Include="protos/DadInt.proto" />
   </ItemGroup>
 
   <ItemGroup>

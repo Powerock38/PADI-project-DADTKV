@@ -1,8 +1,9 @@
 syntax = "proto3";
 
-package TransactionManager;
+package Dadtkv;
 
-import "LeaseManager.proto";  // Import LeaseManager's proto file.
+import "protos/LeaseManager.proto";
+import "protos/DadInt.proto";
 
 service TransactionManagerService {
   // Execute a transaction, including read and write operations.
@@ -22,32 +23,4 @@ message TransactionRequest {
 
 message TransactionResponse {
   repeated DadInt read_values = 1;
-  // Add any additional fields as needed.
-}
-
-message DadInt {
-  string key = 1;
-  int32 value = 2;
-}
-
-// Define Lease-related messages (from LeaseManager.proto).
-import "LeaseManager.proto";
-
-// Define messages for lease request and response.
-message LeaseRequest {
-  repeated string requested_dadints = 1;
-}
-
-message LeaseResponse {
-  repeated Lease lease = 1;
-  // Add any additional fields as needed.
-}
-
-// Define messages for lease release request and response.
-message LeaseReleaseRequest {
-  repeated Lease lease_to_release = 1;
-}
-
-message LeaseReleaseResponse {
-  // Add any response fields as needed.
 }

@@ -1,6 +1,6 @@
 ﻿syntax = "proto3";
 
-package LeaseManager;
+package Dadtkv;
 
 
 service LeaseManagerService {
@@ -17,7 +17,6 @@ message LeaseRequest {
 
 message LeaseResponse {
   repeated Lease lease = 1;
-  // Add any additional fields as needed.
 }
 
 message LeaseReleaseRequest {
@@ -25,7 +24,6 @@ message LeaseReleaseRequest {
 }
 
 message LeaseReleaseResponse {
-  // Add any response fields as needed.
 }
 
 message Lease {
