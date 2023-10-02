@@ -15,6 +15,8 @@ ConfigReader config = new ConfigReader(configPath);
 
 string scriptName = config.clients.Find(c => c.name == clientName).script;
 
+config.waitForStart();
+
 foreach (TransactionManagerStruct tm in config.transactionManagers)
 {
     tm.openChannelService();

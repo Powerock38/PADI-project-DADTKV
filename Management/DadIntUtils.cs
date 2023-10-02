@@ -2,7 +2,7 @@ using Dadtkv;
 
 namespace Management;
 
-public class DadIntUtils
+public static class DadIntUtils
 {
     public static string DadIntsToString(IEnumerable<DadInt> dadInts)
     {

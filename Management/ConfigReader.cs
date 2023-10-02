@@ -17,7 +17,7 @@ public class ConfigReader
     public List<ClientStruct> clients { get; }
 
     public uint systemDuration { get; }
-    public TimeSpan tStart { get; }
+    private DateTime tStart;
     public uint durationSlot { get; }
 
     public ConfigReader(string configFilePath)
@@ -75,7 +75,23 @@ public class ConfigReader
                     break;
 
                 case ConfigCommands.TStart:
-                    tStart = TimeSpan.Parse(args[1]);
+                    DateTime currentDate = DateTime.Now.Date;
+
+                    string[] timeParts = args[1].Split(':');
+                    if (timeParts.Length == 3 &&
+                        int.TryParse(timeParts[0], out int hours) &&
+                        int.TryParse(timeParts[1], out int minutes) &&
+                        int.TryParse(timeParts[2], out int seconds))
+                    {
+                        DateTime dateTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, hours,
+                            minutes, seconds);
+                        tStart = dateTime;
+                    }
+                    else
+                    {
+                        throw new Exception("Invalid time format: " + args[1]);
+                    }
+
                     break;
 
                 case ConfigCommands.FailureDetection:
@@ -85,6 +101,24 @@ public class ConfigReader
                 default:
                     throw new Exception("Invalid config line: " + line);
             }
+        }
+    }
+
+    public void waitForStart()
+    {
+        TimeSpan timeToSleep = tStart - DateTime.Now;
+
+        if (timeToSleep.TotalMilliseconds > 0)
+        {
+            Console.WriteLine($"Sleeping for {timeToSleep.TotalMilliseconds} milliseconds...");
+            Thread.Sleep(timeToSleep);
+            Console.WriteLine("Wake up time reached!");
+        }
+        else
+        {
+            Console.WriteLine("invalid tStart, starting in 5 seconds...");
+            tStart = DateTime.Now.AddSeconds(5);
+            waitForStart();
         }
     }
 }
