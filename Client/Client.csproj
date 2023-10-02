@@ -8,13 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<Protobuf Include="protos/Client.proto" GrpcServices="Client" />
-	<Protobuf Include="protos/LeaseManager.proto" GrpcServices="LeaseManager" />
-	<Protobuf Include="protos/TransactionManager.proto" GrpcServices="TransactionManager" />
-	<Protobuf Include="protos/DadInt.proto" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.24.3" />
     <PackageReference Include="Grpc.Core" Version="2.46.6" />
     <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />

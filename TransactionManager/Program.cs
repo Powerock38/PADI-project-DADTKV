@@ -1,5 +1,7 @@
-﻿using Grpc.Core;
+﻿using Dadtkv;
+using Grpc.Core;
 using Management;
+using TransactionManager;
 
 if (args.Length == 0)
 {
@@ -10,21 +12,35 @@ if (args.Length == 0)
 string configPath = args[0];
 string tmName = args[1];
 
-ConfigReader config = new ConfigReader(configPath);
+Uri? uri = null;
 
-// TODO: start gRPC server
-// Server server = new Server
-// {
-//     Services = { ChatServerService.BindService(new ServerService()) },
-//     Ports = { new ServerPort(hostname, port, ServerCredentials.Insecure) }
-// };
-// server.Start();
+ConfigReader config = new ConfigReader(configPath);
 
 foreach (TransactionManagerStruct tm in config.transactionManagers)
 {
     if (tm.name != tmName)
     {
-        tm.openChannel();
+        tm.openChannelService();
         Console.WriteLine("Ready");
     }
+    else
+    {
+        uri = new Uri(tm.url);
+    }
 }
+
+if (uri == null)
+{
+    Console.WriteLine("didn't found myself in config file");
+    return;
+}
+
+Server server = new Server
+{
+    Services = { TransactionManagerService.BindService(new TransactionManagerServiceImpl(tmName)) },
+    Ports = { new ServerPort(uri.Host, uri.Port, ServerCredentials.Insecure) }
+};
+server.Start();
+
+while(true)
+{}

@@ -1,19 +1,36 @@
-namespace client;
+using Dadtkv;
+using Management;
 
-public struct DadInt
-{
-    public string key;
-    public int value;
-}
+namespace client;
 
 public class DADTKVClientLib
 {
-    List<DadInt> TxSubmit(string clientId, List<string> dadIntKeysToRead, List<DadInt> dadIntsToWrite)
+
+    private int currentTmIndex;
+
+    private readonly List<TransactionManagerStruct> tms;
+
+    private TransactionManagerStruct getCurrentTM()
     {
-        return null;
+        return tms[currentTmIndex];
     }
 
-    bool Status()
+    public DADTKVClientLib(List<TransactionManagerStruct> tms)
+    {
+        this.tms = tms;
+        currentTmIndex = new Random().Next(tms.Count);
+    }
+    
+    public List<DadInt> TxSubmit(string clientId, TransactionRequest request)
+    {
+       var res= getCurrentTM().service!.ExecuteTransaction(request);
+
+        currentTmIndex = (currentTmIndex + 1) % tms.Count;
+        
+        return res.ReadValues.ToList();
+    }
+
+    public bool Status()
     {
         return false;
     }

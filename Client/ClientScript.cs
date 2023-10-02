@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Dadtkv;
+using Management;
 
 namespace client;
 
@@ -16,56 +18,75 @@ public partial class ClientScript
         Transaction = 'T',
         Wait = 'W',
     }
+    
+    private readonly List<string> lines = new();
+
+    private int currentLineIndex = 0;
 
     public ClientScript(string scriptPath)
     {
-        IEnumerable<string> lines = File.ReadLines(scriptPath);
+        lines.AddRange(File.ReadLines(scriptPath));
+    }
 
-        foreach (string line in lines)
+    public TransactionRequest? runOneLine()
+    {
+        string line = lines[currentLineIndex];
+
+        string[] args = line.Split(' ');
+
+        ClientScriptCommands command = (ClientScriptCommands)line[0];
+
+        TransactionRequest? request = null;
+
+        switch (command)
         {
-            string[] args = line.Split(' ');
+            case ClientScriptCommands.Comment:
+                break;
 
-            ClientScriptCommands command = (ClientScriptCommands)line[0];
+            case ClientScriptCommands.Transaction:
+                string readKeysString = args[1];
 
-            switch (command)
-            {
-                case ClientScriptCommands.Comment:
-                    continue;
+                List<string> readKeys = readKeysPattern().Matches(readKeysString)
+                    .Select(match => match.Groups[1].Value).ToList();
 
-                case ClientScriptCommands.Transaction:
-                    string readKeysString = args[1];
+                string writeKeysString = args[2].Trim('(', ')');
+                if (writeKeysString != "")
+                {
+                    writeKeysString = writeKeysString.Substring(1, writeKeysString.Length - 2);
+                }
 
-                    List<string> readKeys = readKeysPattern().Matches(readKeysString)
-                        .Select(match => match.Groups[1].Value).ToList();
-
-                    string writeKeysString = args[2].Trim('(', ')');
-                    if (writeKeysString != "")
+                List<DadInt> writeKeys = writeKeysString.Split(">,<")
+                    .Where(input => input != "")
+                    .Select(input =>
                     {
-                        writeKeysString = writeKeysString.Substring(1, writeKeysString.Length - 2);
-                    }
-
-                    List<DadInt> writeKeys = writeKeysString.Split(">,<")
-                        .Where(input => input != "")
-                        .Select(input =>
+                        Match match = writeKeyValuePattern().Matches(input)[0];
+                        var dadInt = new DadInt
                         {
-                            Match match = writeKeyValuePattern().Matches(input)[0];
-                            return new DadInt
-                                { key = match.Groups[2].Value, value = int.Parse(match.Groups[3].Value) };
-                        }).ToList();
+                            Key = match.Groups[2].Value,
+                            Value = int.Parse(match.Groups[3].Value)
+                        };
+                        return dadInt;
+                    }).ToList();
 
-                    Console.WriteLine("Read keys: " + string.Join(", ", readKeys));
-                    Console.WriteLine("Write keys: " + string.Join(", ",
-                        writeKeys.Select(dadInt => dadInt.key + " = " + dadInt.value)));
-                    break;
+                Console.WriteLine("Read keys: " + DadIntUtils.DadIntsKeysToString(readKeys));
+                Console.WriteLine("Write keys: " + DadIntUtils.DadIntsToString(writeKeys));
 
-                case ClientScriptCommands.Wait:
-                    int waitTime = int.Parse(args[1]);
-                    Thread.Sleep(waitTime);
-                    break;
+                request = new TransactionRequest();
+                request.ReadDadints.AddRange(readKeys);
+                request.WriteDadints.AddRange(writeKeys);
+                break;
 
-                default:
-                    throw new Exception("Invalid script line: " + line);
-            }
+            case ClientScriptCommands.Wait:
+                int waitTime = int.Parse(args[1]);
+                Thread.Sleep(waitTime);
+                break;
+
+            default:
+                throw new Exception("Invalid script line: " + line);
         }
+
+        currentLineIndex = (currentLineIndex + 1) % lines.Count;
+
+        return request;
     }
 }
