@@ -20,14 +20,16 @@ config.waitForStart();
 foreach (TransactionManagerStruct tm in config.transactionManagers)
 {
     tm.openChannelService();
-    Console.WriteLine($"Connected to {tm.name} {tm.url}");
+    // Console.WriteLine($"Connected to {tm.name} {tm.url}");
 }
 
-Console.WriteLine("Executing script: " + scriptName + "...");
+// Console.WriteLine("Executing script: " + scriptName + "...");
 
 ClientScript script = new ClientScript($"../../../../Client/scripts/{scriptName}");
 
-DADTKVClientLib lib = new(config.transactionManagers);
+// Pick a random TM
+TransactionManagerStruct myChoosenTM = config.transactionManagers[new Random().Next(config.transactionManagers.Count)];
+DADTKVClientLib lib = new(myChoosenTM);
 
 while (true)
 {

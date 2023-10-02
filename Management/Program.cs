@@ -3,7 +3,7 @@ using Management;
 
 Console.WriteLine("MAIN> Management console started");
 
-string configAbsolutePath = Path.GetFullPath(args.Length > 0 ? args[0] : "../../../../configuration_sample.txt");
+string configAbsolutePath = Path.GetFullPath(args.Length > 0 ? args[0] : "../../../../config-simple.txt");
 
 ConfigReader config = new ConfigReader(configAbsolutePath);
 

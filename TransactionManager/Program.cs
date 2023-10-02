@@ -21,7 +21,6 @@ foreach (TransactionManagerStruct tm in config.transactionManagers)
     if (tm.name != tmName)
     {
         tm.openChannelService();
-        Console.WriteLine("Ready");
     }
     else
     {
@@ -37,10 +36,17 @@ if (uri == null)
 
 Server server = new Server
 {
-    Services = { TransactionManagerService.BindService(new TransactionManagerServiceImpl(tmName)) },
+    Services =
+    {
+        TransactionManagerService.BindService(
+            new TransactionManagerServiceImpl(tmName, config.transactionManagers, config.leaseManagers))
+    },
     Ports = { new ServerPort(uri.Host, uri.Port, ServerCredentials.Insecure) }
 };
 server.Start();
 
-while(true)
-{}
+Console.WriteLine("Ready");
+
+while (true)
+{
+}

@@ -8,13 +8,23 @@ import "protos/DadInt.proto";
 service TransactionManagerService {
   // Execute a transaction, including read and write operations.
   rpc ExecuteTransaction(TransactionRequest) returns (TransactionResponse);
+  rpc BroadcastDadInts(BroadcastDadIntsMsg) returns (BroadcastDadIntsAck);
 }
 
 message TransactionRequest {
-  repeated string read_dadints = 1;
-  repeated DadInt write_dadints = 2;
+  string client_id = 1;
+  repeated string read_dadints = 2;
+  repeated DadInt write_dadints = 3;
 }
 
 message TransactionResponse {
   repeated DadInt read_values = 1;
+}
+
+message BroadcastDadIntsMsg {
+  repeated DadInt dadints = 1;
+}
+
+message BroadcastDadIntsAck {
+  bool ok = 1;
 }

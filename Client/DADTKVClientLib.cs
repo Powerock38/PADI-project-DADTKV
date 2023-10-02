@@ -5,28 +5,19 @@ namespace client;
 
 public class DADTKVClientLib
 {
+    private readonly TransactionManagerStruct tm;
 
-    private int currentTmIndex;
-
-    private readonly List<TransactionManagerStruct> tms;
-
-    private TransactionManagerStruct getCurrentTM()
+    public DADTKVClientLib(TransactionManagerStruct tm)
     {
-        return tms[currentTmIndex];
+        this.tm = tm;
     }
 
-    public DADTKVClientLib(List<TransactionManagerStruct> tms)
-    {
-        this.tms = tms;
-        currentTmIndex = new Random().Next(tms.Count);
-    }
-    
     public List<DadInt> TxSubmit(string clientId, TransactionRequest request)
     {
-       var res= getCurrentTM().service!.ExecuteTransaction(request);
+        request.ClientId = clientId;
 
-        currentTmIndex = (currentTmIndex + 1) % tms.Count;
-        
+        var res = tm.service!.ExecuteTransaction(request);
+
         return res.ReadValues.ToList();
     }
 

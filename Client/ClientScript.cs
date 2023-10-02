@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
 using Dadtkv;
-using Management;
 
 namespace client;
 
@@ -68,8 +67,7 @@ public partial class ClientScript
                         return dadInt;
                     }).ToList();
 
-                Console.WriteLine("Read keys: " + DadIntUtils.DadIntsKeysToString(readKeys));
-                Console.WriteLine("Write keys: " + DadIntUtils.DadIntsToString(writeKeys));
+                Console.WriteLine("Sending transaction: " + line);
 
                 request = new TransactionRequest();
                 request.ReadDadints.AddRange(readKeys);

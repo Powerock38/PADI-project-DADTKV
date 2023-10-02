@@ -1,0 +1,16 @@
+P TM1 T http://127.0.0.1:25565
+P TM2 T http://127.0.0.1:25566
+P TM3 T http://127.0.0.1:25567
+#
+P c1 C c1.txt
+P c2 C c2.txt
+#
+# this test will run for 100 time slots.
+S 100
+#
+# this test starts at 12:10:15 (physical wall time)
+T 12:10:15
+#
+# Each time slots lasts 10000 miliseconds
+D 10000 
+#
