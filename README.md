@@ -7,6 +7,15 @@ The `dotnet` command must be in your $PATH environment variable.
 
 ## Running the program
 
+### TL;DR: at the root of this repository:
+```bash
+dotnet build
+cd Management/bin/Debug/net7.0/
+./Management
+```
+
+### More details:
+
 The main project is `Management.csproj`.  
 It reads the configuration and launches the other projects as separate processes.
 
@@ -14,16 +23,6 @@ This program can be run using the command line : first build the solution using 
 then run the `Management` project executable (may be .exe on Windows) in `Management/bin/Debug/net7.0/`.
 
 At this time it works only if your working directory is `Management/bin/Debug/net7.0/` when launching the Management console.
-
-
-At the root of this repository:
-```bash
-dotnet build
-cd Management/bin/Debug/net7.0/
-./Management
-```
-
-
 
 ## Disclaimer
 
