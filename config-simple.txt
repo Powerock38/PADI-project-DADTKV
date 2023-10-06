@@ -2,6 +2,10 @@ P TM1 T http://127.0.0.1:25565
 P TM2 T http://127.0.0.1:25566
 P TM3 T http://127.0.0.1:25567
 #
+P LM1 L http://127.0.0.1:7777
+P LM2 L http://127.0.0.1:7778
+P LM3 L http://127.0.0.1:7779
+#
 P c1 C c1.txt
 P c2 C c2.txt
 #

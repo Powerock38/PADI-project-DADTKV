@@ -4,26 +4,16 @@ package Dadtkv;
 
 
 service LeaseManagerService {
-  // Request leases for a set of DadInts.
   rpc RequestLeases(LeaseRequest) returns (LeaseResponse);
-
-  // Release leases, including conflicting ones.
-  rpc ReleaseLeases(LeaseReleaseRequest) returns (LeaseReleaseResponse);
 }
 
 message LeaseRequest {
-  repeated string requested_dadints = 1;
+  string transaction_manager_id = 1;
+  repeated string requested_dadints = 2;
 }
 
 message LeaseResponse {
   repeated Lease lease = 1;
-}
-
-message LeaseReleaseRequest {
-  repeated Lease lease_to_release = 1;
-}
-
-message LeaseReleaseResponse {
 }
 
 message Lease {
