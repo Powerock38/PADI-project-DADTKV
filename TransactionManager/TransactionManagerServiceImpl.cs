@@ -17,7 +17,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         this.leaseManagers = leaseManagers;
     }
 
-    private readonly List<DadInt> dadInts = new();
+    private readonly Dictionary<string, int> dadInts = new();
 
     private readonly string name;
 
@@ -31,11 +31,16 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
     public override async Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
         ServerCallContext context)
     {
-        Console.WriteLine($"Received transaction request from {request.ClientId}: read {DadIntUtils.DadIntsKeysToString(request.ReadDadints)} | write {DadIntUtils.DadIntsToString(request.WriteDadints)}");
+        List<string> requestReadDadInts = request.ReadDadints.Where(key => !string.IsNullOrEmpty(key)).ToList();
+
+        Console.WriteLine(
+            $"Received transaction request from {request.ClientId}: read {DadIntUtils.DadIntsKeysToString(requestReadDadInts)} | write {DadIntUtils.DadIntsToString(request.WriteDadints)}");
+
+        Console.WriteLine($"MY COLLECTION = {DadIntUtils.DadIntsDictionnaryToString(dadInts)}");
 
         // For each dadints asked (read or write), we check if TM has a lease for it. If not, TM asks for a lease.
         List<string> dadIntKeysToCheckLeases =
-            request.ReadDadints.Concat(request.WriteDadints.Select(d => d.Key)).ToList();
+            requestReadDadInts.Concat(request.WriteDadints.Select(d => d.Key)).ToList();
 
         List<string> myLeases = getMyLeases();
 
@@ -54,23 +59,31 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
         // Build the response
         TransactionResponse response = new TransactionResponse();
-        response.ReadValues.AddRange(dadInts.Where(d => request.ReadDadints.Contains(d.Key)));
+
+        foreach (string key in requestReadDadInts)
+        {
+                if (dadInts.ContainsKey(key))
+                {
+                    response.ReadValues.Add(
+                        new DadInt
+                        {
+                            Key = key,
+                            Value = dadInts[key]
+                        }
+                    );
+                }
+                else
+                {
+                    Console.WriteLine($"ERROR: {key} not found in dadints");
+                }
+        }
 
         // Update local dadints database (from request.WriteDadints)
         List<DadInt> dadIntsToBroadcast = new();
         foreach (DadInt dadInt in request.WriteDadints)
         {
-            var index = dadInts.FindIndex(d => d.Key == dadInt.Key);
-            if (index != -1)
-            {
-                dadInts[index].Value = dadInt.Value;
-                dadIntsToBroadcast.Add(dadInts[index]);
-            }
-            else
-            {
-                dadInts.Add(dadInt);
-                dadIntsToBroadcast.Add(dadInt);
-            }
+            dadInts[dadInt.Key] = dadInt.Value;
+            dadIntsToBroadcast.Add(dadInt);
         }
 
         // Broadcast new or edited dadints (from request.WriteDadints) to all other TMs
@@ -94,9 +107,13 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     public override Task<BroadcastDadIntsAck> BroadcastDadInts(BroadcastDadIntsMsg msg, ServerCallContext context)
     {
-        Console.WriteLine("Received broadcast dadints: " + DadIntUtils.DadIntsToString(msg.Dadints));
+        foreach (var dadInt in msg.Dadints)
+        {
+            dadInts[dadInt.Key] = dadInt.Value;
+        }
 
-        dadInts.AddRange(msg.Dadints);
+        Console.WriteLine(
+            $"Received broadcast dadints: {DadIntUtils.DadIntsToString(msg.Dadints)} now collection is {DadIntUtils.DadIntsDictionnaryToString(dadInts)}");
 
         return Task.FromResult(new BroadcastDadIntsAck { Ok = true });
     }

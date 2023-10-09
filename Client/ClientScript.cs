@@ -8,16 +8,13 @@ public partial class ClientScript
     [GeneratedRegex("(\"([^\"]*)\",(\\d+))")]
     private static partial Regex writeKeyValuePattern();
 
-    [GeneratedRegex("\\((\"([^\"]+)\"(?:,\"([^\"]+)\")*)?\\)")]
-    private static partial Regex readKeysPattern();
-
     private enum ClientScriptCommands
     {
         Comment = '#',
         Transaction = 'T',
         Wait = 'W',
     }
-    
+
     private readonly List<string> lines = new();
 
     private int currentLineIndex = 0;
@@ -43,10 +40,11 @@ public partial class ClientScript
                 break;
 
             case ClientScriptCommands.Transaction:
-                string readKeysString = args[1];
-
-                List<string> readKeys = readKeysPattern().Matches(readKeysString)
-                    .Select(match => match.Groups[1].Value).ToList();
+                string readKeysString = args[1].Trim('(', ')');
+                List<string> readKeys = readKeysString.Split(",")
+                    .Select(key => key.Trim('"'))
+                    .Where(key => !string.IsNullOrWhiteSpace(key))
+                    .ToList();
 
                 string writeKeysString = args[2].Trim('(', ')');
                 if (writeKeysString != "")
@@ -55,7 +53,7 @@ public partial class ClientScript
                 }
 
                 List<DadInt> writeKeys = writeKeysString.Split(">,<")
-                    .Where(input => input != "")
+                    .Where(input => !string.IsNullOrWhiteSpace(input))
                     .Select(input =>
                     {
                         Match match = writeKeyValuePattern().Matches(input)[0];

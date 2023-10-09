@@ -37,8 +37,8 @@ while (true)
 
     if (request != null)
     {
-        List<DadInt> dadInts = lib.TxSubmit(clientName, request);
+        IEnumerable<DadInt> dadInts = lib.TxSubmit(clientName, request);
 
-        Console.WriteLine("RESPONSE FROM TM: " + DadIntUtils.DadIntsToString(dadInts));
+        Console.WriteLine($"RESPONSE FROM {myChoosenTM.name}: {DadIntUtils.DadIntsToString(dadInts)}");
     }
 }

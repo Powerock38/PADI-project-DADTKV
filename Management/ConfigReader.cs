@@ -106,19 +106,24 @@ public class ConfigReader
 
     public void waitForStart()
     {
-        TimeSpan timeToSleep = tStart - DateTime.Now;
+        while (true)
+        {
+            TimeSpan timeToSleep = tStart - DateTime.Now;
 
-        if (timeToSleep.TotalMilliseconds > 0)
-        {
-            Console.WriteLine($"Sleeping for {timeToSleep.TotalMilliseconds} milliseconds...");
-            Thread.Sleep(timeToSleep);
-            Console.WriteLine("Wake up time reached!");
-        }
-        else
-        {
-            Console.WriteLine("invalid tStart, starting in 5 seconds...");
-            tStart = DateTime.Now.AddSeconds(5);
-            waitForStart();
+            if (timeToSleep.TotalMilliseconds > 0)
+            {
+                Console.WriteLine($"Sleeping for {timeToSleep.TotalMilliseconds} milliseconds...");
+                Thread.Sleep(timeToSleep);
+                Console.WriteLine("Ready");
+            }
+            else
+            {
+                Console.WriteLine("invalid tStart, starting in 5 seconds...");
+                tStart = DateTime.Now.AddSeconds(5);
+                continue;
+            }
+
+            break;
         }
     }
 }

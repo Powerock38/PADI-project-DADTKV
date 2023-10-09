@@ -12,13 +12,13 @@ public class DADTKVClientLib
         this.tm = tm;
     }
 
-    public List<DadInt> TxSubmit(string clientId, TransactionRequest request)
+    public IEnumerable<DadInt> TxSubmit(string clientId, TransactionRequest request)
     {
         request.ClientId = clientId;
 
         var res = tm.service!.ExecuteTransaction(request);
 
-        return res.ReadValues.ToList();
+        return res.ReadValues;
     }
 
     public bool Status()
