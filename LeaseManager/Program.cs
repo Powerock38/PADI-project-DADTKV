@@ -28,24 +28,35 @@ foreach (LeaseManagerStruct lm in config.leaseManagers)
     }
 }
 
+foreach (TransactionManagerStruct tm in config.transactionManagers)
+{
+    tm.openChannelService();
+}
+
 if (uri == null)
 {
     Console.WriteLine("didn't found myself in config file");
     return;
 }
 
+var lmService = new LeaseManagerServiceImpl(lmName, config.transactionManagers, config.leaseManagers);
+
 Server server = new Server
 {
     Services =
     {
-        LeaseManagerService.BindService(
-            new LeaseManagerServiceImpl(lmName, config.transactionManagers, config.leaseManagers))
+        LeaseManagerService.BindService(lmService)
     },
     Ports = { new ServerPort(uri.Host, uri.Port, ServerCredentials.Insecure) }
 };
 server.Start();
 
-Console.WriteLine("Ready");
+config.ReadyWaitForStart();
+
+config.ScheduleForNextSlot((slot) =>
+{
+    lmService.ProcessLeaseRequests(slot);
+});
 
 while (true)
 {

@@ -1,4 +1,5 @@
 using Dadtkv;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Management;
 
@@ -28,7 +29,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         return leases.Where(l => l.TransactionManagerId == name).SelectMany(l => l.Dadints).ToList();
     }
 
-    public override async Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
+    public override Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
         ServerCallContext context)
     {
         List<string> requestReadDadInts = request.ReadDadints.Where(key => !string.IsNullOrEmpty(key)).ToList();
@@ -49,12 +50,15 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         // If we need to request leases, we ask for them
         if (dadIntKeysToRequestLeases.Count > 0)
         {
-            LeaseRequest leaseRequest = new LeaseRequest();
-            leaseRequest.RequestedDadints.AddRange(dadIntKeysToRequestLeases);
+            Lease leaseRequest = new();
+            leaseRequest.Dadints.AddRange(dadIntKeysToRequestLeases);
 
             Console.WriteLine("Requesting lease for: " + DadIntUtils.DadIntsKeysToString(dadIntKeysToRequestLeases));
 
-            await RequestLeases(leaseRequest);
+            foreach (var lm in leaseManagers)
+            {
+                lm.service!.RequestLeases(leaseRequest);
+            }
         }
 
         // Build the response
@@ -62,20 +66,20 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
         foreach (string key in requestReadDadInts)
         {
-                if (dadInts.ContainsKey(key))
-                {
-                    response.ReadValues.Add(
-                        new DadInt
-                        {
-                            Key = key,
-                            Value = dadInts[key]
-                        }
-                    );
-                }
-                else
-                {
-                    Console.WriteLine($"ERROR: {key} not found in dadints");
-                }
+            if (dadInts.TryGetValue(key, out var val))
+            {
+                response.ReadValues.Add(
+                    new DadInt
+                    {
+                        Key = key,
+                        Value = val
+                    }
+                );
+            }
+            else
+            {
+                Console.WriteLine($"ERROR: {key} not found in dadints");
+            }
         }
 
         // Update local dadints database (from request.WriteDadints)
@@ -96,13 +100,16 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             }
         }
 
-        return response;
+        return Task.FromResult(response);
     }
 
-    private Task RequestLeases(LeaseRequest request)
+    public override Task<Empty> ReceiveAccepted(PaxosAccept accept, ServerCallContext context)
     {
-        //TODO: implement
-        return Task.CompletedTask;
+        //TODO: we finally got the lease response, respond to client in waiting
+
+        leases.AddRange(accept.AcceptedValue);
+
+        return Task.FromResult(new Empty());
     }
 
     public override Task<BroadcastDadIntsAck> BroadcastDadInts(BroadcastDadIntsMsg msg, ServerCallContext context)

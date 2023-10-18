@@ -12,9 +12,9 @@ P c2 C c2.txt
 # this test will run for 100 time slots.
 S 100
 #
-# this test starts at 12:10:15 (physical wall time)
-T 12:10:15
+# this test starts at (physical wall time)
+T 17:36:00
 #
-# Each time slots lasts 10000 miliseconds
-D 10000 
+# Each time slots lasts 2s
+D 2000
 #

@@ -2,13 +2,16 @@ syntax = "proto3";
 
 package Dadtkv;
 
+import "google/protobuf/empty.proto";
 import "protos/LeaseManager.proto";
 import "protos/DadInt.proto";
 
 service TransactionManagerService {
-  // Execute a transaction, including read and write operations.
   rpc ExecuteTransaction(TransactionRequest) returns (TransactionResponse);
   rpc BroadcastDadInts(BroadcastDadIntsMsg) returns (BroadcastDadIntsAck);
+  
+  // Paxos Learner
+  rpc ReceiveAccepted(PaxosAccept) returns (google.protobuf.Empty);
 }
 
 message TransactionRequest {

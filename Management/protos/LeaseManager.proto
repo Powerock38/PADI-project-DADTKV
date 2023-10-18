@@ -2,21 +2,36 @@
 
 package Dadtkv;
 
+import "google/protobuf/empty.proto";
 
 service LeaseManagerService {
-  rpc RequestLeases(LeaseRequest) returns (LeaseResponse);
-}
+  rpc RequestLeases(Lease) returns (google.protobuf.Empty);
 
-message LeaseRequest {
-  string transaction_manager_id = 1;
-  repeated string requested_dadints = 2;
-}
-
-message LeaseResponse {
-  repeated Lease lease = 1;
+  // Paxos Acceptor
+  rpc ReceivePrepare(PaxosProposal) returns (google.protobuf.Empty);
+  rpc ReceiveAccept(PaxosAccept) returns (google.protobuf.Empty);
+  
+  // Paxos Proposer
+  rpc ReceivePromise(PaxosPromise) returns (google.protobuf.Empty);
 }
 
 message Lease {
   string transaction_manager_id = 1;
   repeated string dadints = 2;
+}
+
+message PaxosProposal {
+  string lease_manager_id = 1;
+  int32 proposal_id = 2;
+}
+
+message PaxosPromise {
+  PaxosProposal proposal = 1;
+  int32 previous_accepted_id = 2;
+  repeated Lease previous_accepted_value = 3;
+}
+
+message PaxosAccept {
+  int32 proposal_id = 1;
+  repeated Lease accepted_value = 2;
 }

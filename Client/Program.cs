@@ -15,7 +15,8 @@ ConfigReader config = new ConfigReader(configPath);
 
 string scriptName = config.clients.Find(c => c.name == clientName).script;
 
-config.waitForStart();
+// clients wait 3s before starting, to make sure all servers are up
+Thread.Sleep(3000);
 
 foreach (TransactionManagerStruct tm in config.transactionManagers)
 {
@@ -23,13 +24,13 @@ foreach (TransactionManagerStruct tm in config.transactionManagers)
     // Console.WriteLine($"Connected to {tm.name} {tm.url}");
 }
 
-// Console.WriteLine("Executing script: " + scriptName + "...");
-
 ClientScript script = new ClientScript($"../../../../Client/scripts/{scriptName}");
 
 // Pick a random TM
 TransactionManagerStruct myChoosenTM = config.transactionManagers[new Random().Next(config.transactionManagers.Count)];
 DADTKVClientLib lib = new(myChoosenTM);
+
+config.ReadyWaitForStart();
 
 while (true)
 {

@@ -28,6 +28,11 @@ foreach (TransactionManagerStruct tm in config.transactionManagers)
     }
 }
 
+foreach (LeaseManagerStruct lm in config.leaseManagers)
+{
+    lm.openChannelService();
+}
+
 if (uri == null)
 {
     Console.WriteLine("didn't found myself in config file");
@@ -45,7 +50,7 @@ Server server = new Server
 };
 server.Start();
 
-Console.WriteLine("Ready");
+config.ReadyWaitForStart();
 
 while (true)
 {
