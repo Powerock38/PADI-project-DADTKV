@@ -22,11 +22,11 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     private readonly string name;
 
-    private readonly List<Lease> leases = new();
+    private LeaseDB leases = new();
 
-    private List<string> getMyLeases()
+    private SortedSet<string> GetMyLeases()
     {
-        return leases.Where(l => l.TransactionManagerId == name).SelectMany(l => l.Dadints).ToList();
+        return leases.Get(name);
     }
 
     public override Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
@@ -43,14 +43,17 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         List<string> dadIntKeysToCheckLeases =
             requestReadDadInts.Concat(request.WriteDadints.Select(d => d.Key)).ToList();
 
-        List<string> myLeases = getMyLeases();
+        SortedSet<string> myLeases = GetMyLeases();
 
         List<string> dadIntKeysToRequestLeases = dadIntKeysToCheckLeases.Where(key => !myLeases.Contains(key)).ToList();
 
         // If we need to request leases, we ask for them
         if (dadIntKeysToRequestLeases.Count > 0)
         {
-            Lease leaseRequest = new();
+            Lease leaseRequest = new()
+            {
+                TransactionManagerId = name
+            };
             leaseRequest.Dadints.AddRange(dadIntKeysToRequestLeases);
 
             Console.WriteLine("Requesting lease for: " + DadIntUtils.DadIntsKeysToString(dadIntKeysToRequestLeases));
@@ -59,6 +62,12 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             {
                 lm.service!.RequestLeases(leaseRequest);
             }
+
+            //TODO: maybe wait for leases to be received instead of aborting the transaction?
+            return Task.FromResult(new TransactionResponse
+            {
+                ReadValues = { new DadInt { Key = "abort", Value = 0 } }
+            });
         }
 
         // Build the response
@@ -105,9 +114,14 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     public override Task<Empty> ReceiveAccepted(PaxosAccept accept, ServerCallContext context)
     {
-        //TODO: we finally got the lease response, respond to client in waiting
+        //TODO: maybe wait for every accept before sending the response to the client? and assert that we have a quorum
+        // https://github.com/cocagne/paxos/blob/master/paxos/essential.py#L162
 
-        leases.AddRange(accept.AcceptedValue);
+        //TODO: we finally got the lease response, respond to client in waiting?
+
+        leases = LeaseDB.FromGRPC(accept.AcceptedValue);
+
+        Console.WriteLine(leases);
 
         return Task.FromResult(new Empty());
     }

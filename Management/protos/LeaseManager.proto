@@ -20,18 +20,28 @@ message Lease {
   repeated string dadints = 2;
 }
 
+// Because we can't do
+// map<string, repeated string>
+message LeaseDB_GRPC {
+  message LeaseDBEntry {
+    repeated string dadints = 1;
+  }
+  map<string, LeaseDBEntry> lease_db = 1;
+}
+
 message PaxosProposal {
   string lease_manager_id = 1;
-  int32 proposal_id = 2;
+  int32 epoch = 2;
 }
 
 message PaxosPromise {
-  PaxosProposal proposal = 1;
-  int32 previous_accepted_id = 2;
-  repeated Lease previous_accepted_value = 3;
+  string lease_manager_id = 1;
+  int32 epoch = 2;
+  int32 previous_epoch = 3;
+  LeaseDB_GRPC previous_accepted_value = 4;
 }
 
 message PaxosAccept {
-  int32 proposal_id = 1;
-  repeated Lease accepted_value = 2;
+  int32 epoch = 1;
+  LeaseDB_GRPC accepted_value = 2;
 }

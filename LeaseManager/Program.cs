@@ -53,10 +53,15 @@ server.Start();
 
 config.ReadyWaitForStart();
 
-config.ScheduleForNextSlot((slot) =>
+Action<uint>? loopEverySlot = null;
+loopEverySlot = (slot) =>
 {
     lmService.ProcessLeaseRequests(slot);
-});
+
+    config.ScheduleForNextSlot(loopEverySlot!);
+};
+
+config.ScheduleForNextSlot(loopEverySlot);
 
 while (true)
 {

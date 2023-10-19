@@ -1,2 +1,3 @@
-T () (<"aaaaa",10>,<"bbbb",20>)
+T () (<"zzzz",99>,<"xxxx",77>)
 W 5000
+T ("zzzz","xxxx") (<"aaaa",10>,<"bbbb",20>)

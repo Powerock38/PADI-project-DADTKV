@@ -76,15 +76,15 @@ void StartProcess(string path, string arguments, string nodeName)
 
 void ProcessExited(Process process, string nodeName)
 {
-    Console.WriteLine($"{nodeName} EXITED> process exited with code {process.ExitCode.ToString()}");
+    Console.WriteLine(
+        $"{CurrentTimeFormatted()} | {nodeName} EXITED> process exited with code {process.ExitCode.ToString()}");
 }
 
 void ProcessErrorDataReceived(DataReceivedEventArgs e, string nodeName)
 {
     if (!string.IsNullOrWhiteSpace(e.Data))
     {
-        Console.WriteLine($"{nodeName} ERROR> {e.Data}");
-
+        Console.WriteLine($"{CurrentTimeFormatted()} | {nodeName} ERROR> {e.Data}");
     }
 }
 
@@ -92,6 +92,11 @@ void ProcessOutputDataReceived(DataReceivedEventArgs e, string nodeName)
 {
     if (!string.IsNullOrWhiteSpace(e.Data))
     {
-        Console.WriteLine($"{nodeName}> {e.Data}");
+        Console.WriteLine($"{CurrentTimeFormatted()} | {nodeName}> {e.Data}");
     }
+}
+
+string CurrentTimeFormatted()
+{
+    return DateTime.Now.ToString("HH:mm:ss.fff");
 }
