@@ -39,7 +39,7 @@ if (uri == null)
     return;
 }
 
-var lmService = new LeaseManagerServiceImpl(lmName, config.transactionManagers, config.leaseManagers);
+var lmService = new LeaseManagerServiceImpl(lmName, config);
 
 Server server = new Server
 {
@@ -57,6 +57,12 @@ Action<uint>? loopEverySlot = null;
 loopEverySlot = (slot) =>
 {
     lmService.ProcessLeaseRequests(slot);
+
+    if (config.IsCrashed(lmName))
+    {
+        Console.WriteLine("CRASHED!");
+        Environment.Exit(0);
+    }
 
     config.ScheduleForNextSlot(loopEverySlot!);
 };

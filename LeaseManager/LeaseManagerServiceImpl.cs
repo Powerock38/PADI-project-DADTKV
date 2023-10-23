@@ -7,8 +7,7 @@ namespace LeaseManager;
 
 public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBase
 {
-    private readonly List<TransactionManagerStruct> transactionManagers;
-    private readonly List<LeaseManagerStruct> leaseManagers;
+    private readonly ConfigReader config;
     private readonly string name;
 
     private LeaseDB leases = new();
@@ -29,16 +28,21 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
     private int? paxosAcceptedEpoch;
     private LeaseDB? paxosAcceptedValue;
 
-    public LeaseManagerServiceImpl(string name, List<TransactionManagerStruct> transactionManagers,
-        List<LeaseManagerStruct> leaseManagers)
+    public LeaseManagerServiceImpl(string name, ConfigReader config)
     {
         this.name = name;
-        this.transactionManagers = transactionManagers;
-        this.leaseManagers = leaseManagers;
+        this.config = config;
 
-        paxosOrder = leaseManagers.FindIndex(lm => lm.name == name);
+        paxosOrder = config.leaseManagers.FindIndex(lm => lm.name == name);
 
         Console.WriteLine($"Paxos order = {paxosOrder}");
+    }
+    
+    private uint GetQuorumSize()
+    {
+        // TODO minus 1 because we don't count ourselves?
+        int count = config.leaseManagers.Count - config.GetWhoISuspect(name).Count - 1;
+        return (uint)Math.Ceiling(count * 0.5);
     }
 
     public override Task<Empty> RequestLeases(Lease request, ServerCallContext context)
@@ -67,7 +71,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         }
 
         // Check if I am the leader
-        if (slot % leaseManagers.Count != paxosOrder)
+        if (slot % config.leaseManagers.Count != paxosOrder)
         {
             Console.WriteLine($"I am not the leader for slot {slot}");
             return;
@@ -81,12 +85,6 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         paxosProposedValue.AddRange(currentSlotLeaseRequests);
 
         PaxosPrepare();
-    }
-
-    private int GetQorumSize()
-    {
-        //TODO handle down nodes
-        return leaseManagers.Count / 2;
     }
 
     private void PaxosPrepare()
@@ -103,7 +101,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         paxosNextEpoch++;
 
         // Broadcast prepare to all other lease managers
-        foreach (var lm in leaseManagers.Where(lm => lm.name != name))
+        foreach (var lm in config.leaseManagers.Where(lm => lm.name != name))
         {
             lm.service!.ReceivePrepareAsync(paxosProposal);
         }
@@ -122,8 +120,8 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             }
 
             // Send promise to proposer
-            var lm = leaseManagers.First(lm => lm.name == newProposal.LeaseManagerId);
-            
+            var lm = config.leaseManagers.First(lm => lm.name == newProposal.LeaseManagerId);
+
             Console.WriteLine($"PAXOS sending promise to {lm.name}");
             lm.service!.ReceivePromise(new PaxosPromise
             {
@@ -155,8 +153,10 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
 
         paxosPromisesReceivedFrom.Add(promise.LeaseManagerId);
 
+        uint quorum = GetQuorumSize();
+
         Console.WriteLine(
-            $"PAXOS ReceivePromise, epoch={promise.Epoch}, qorum is {GetQorumSize()}, responses={string.Join(", ", paxosPromisesReceivedFrom)}");
+            $"PAXOS ReceivePromise, epoch={promise.Epoch}, quorum is {quorum}, responses={string.Join(", ", paxosPromisesReceivedFrom)}");
 
         if (promise.PreviousEpoch > paxosPreviousAcceptedEpoch)
         {
@@ -168,13 +168,13 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             }
         }
 
-        if (paxosPromisesReceivedFrom.Count == GetQorumSize())
+        if (paxosPromisesReceivedFrom.Count == quorum)
         {
             if (paxosProposedValue != null)
             {
                 Console.WriteLine($"PAXOS ReceivePromise: Broadcasting Accept: {paxosProposedValue}");
                 // Broadcast accept! to ALL lease managers, even itself
-                foreach (var lm in leaseManagers)
+                foreach (var lm in config.leaseManagers)
                 {
                     lm.service!.ReceiveAcceptAsync(new PaxosAccept
                     {
@@ -182,7 +182,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
                         AcceptedValue = paxosProposedValue.IntoGRPC()
                     });
                 }
-                
+
                 // Ready to start a new round!
                 paxosProposedValue = null;
             }
@@ -202,7 +202,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             Console.WriteLine($"PAXOS ReceiveAccept, epoch={accept.Epoch}, accepting {paxosAcceptedValue}");
 
             // Broadcast accepted to all transaction managers
-            foreach (var tm in transactionManagers)
+            foreach (var tm in config.transactionManagers)
             {
                 tm.service!.ReceiveAcceptedAsync(accept);
             }

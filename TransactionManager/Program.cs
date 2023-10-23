@@ -39,18 +39,33 @@ if (uri == null)
     return;
 }
 
+var tmService = new TransactionManagerServiceImpl(tmName, config);
+
 Server server = new Server
 {
     Services =
     {
-        TransactionManagerService.BindService(
-            new TransactionManagerServiceImpl(tmName, config.transactionManagers, config.leaseManagers))
+        TransactionManagerService.BindService(tmService)
     },
     Ports = { new ServerPort(uri.Host, uri.Port, ServerCredentials.Insecure) }
 };
 server.Start();
 
 config.ReadyWaitForStart();
+
+Action<uint>? loopEverySlot = null;
+loopEverySlot = (_) =>
+{
+    if (config.IsCrashed(tmName))
+    {
+        Console.WriteLine("CRASHED!");
+        Environment.Exit(0);
+    }
+
+    config.ScheduleForNextSlot(loopEverySlot!);
+};
+
+config.ScheduleForNextSlot(loopEverySlot);
 
 while (true)
 {

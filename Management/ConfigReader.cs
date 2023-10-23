@@ -16,9 +16,15 @@ public class ConfigReader
     public List<LeaseManagerStruct> leaseManagers { get; }
     public List<ClientStruct> clients { get; }
 
-    public uint systemDuration { get; } // in time slots
+    private readonly uint systemDuration; // in time slots
     private DateTime tStart;
-    private uint durationSlot { get; } // in milliseconds
+    private readonly uint durationSlot; // in milliseconds
+
+    // Slot -> (TM/LM name -> isCrashed)
+    private Dictionary<uint, Dictionary<string, bool>> failureDetection = new();
+
+    // Slot -> (TM/LM name -> (suspecting TM/LM name -> suspected TM/LM name))
+    private Dictionary<uint, Dictionary<string, List<string>>> failureSuspicions = new();
 
     public ConfigReader(string configFilePath)
     {
@@ -94,7 +100,54 @@ public class ConfigReader
                     break;
 
                 case ConfigCommands.FailureDetection:
-                    //TODO
+                    uint slot = uint.Parse(args[1]);
+
+                    // Failure detection
+                    Dictionary<string, bool> failureDetectionThisSlot = new();
+                    string[] tmStates = args[2..(2 + transactionManagers.Count)];
+                    string[] lmStates =
+                        args[(2 + transactionManagers.Count)..(2 + transactionManagers.Count + leaseManagers.Count)];
+
+                    // TMs should be declared first in the config file
+                    var i = 0;
+                    foreach (string state in tmStates)
+                    {
+                        string tm = transactionManagers[i].name;
+                        failureDetectionThisSlot.Add(tm, state == "C");
+                        i++;
+                    }
+
+                    // LMs should be declared after TMs in the config file
+                    i = 0;
+                    foreach (string state in lmStates)
+                    {
+                        string lm = leaseManagers[i].name;
+                        failureDetectionThisSlot.Add(lm, state == "C");
+                        i++;
+                    }
+
+                    failureDetection.Add(slot, failureDetectionThisSlot);
+
+                    // Failure suspicions
+                    Dictionary<string, List<string>> failureSuspicionsThisSlot = new();
+
+                    string[] suspicions = args[(2 + transactionManagers.Count + leaseManagers.Count)..];
+
+                    foreach (string suspicion in suspicions)
+                    {
+                        string[] suspectingSuspected = suspicion[1..^1].Split(',');
+                        string suspecting = suspectingSuspected[0];
+                        string suspected = suspectingSuspected[1];
+
+                        if (!failureSuspicionsThisSlot.ContainsKey(suspecting))
+                        {
+                            failureSuspicionsThisSlot[suspecting] = new List<string>();
+                        }
+
+                        failureSuspicionsThisSlot[suspecting].Add(suspected);
+                    }
+
+                    failureSuspicions.Add(slot, failureSuspicionsThisSlot);
                     break;
 
                 default:
@@ -141,7 +194,7 @@ public class ConfigReader
         }
     }
 
-    public uint GetCurrentSlot()
+    private uint GetCurrentSlot()
     {
         return (uint)Math.Floor((DateTime.Now - tStart) / TimeSpan.FromMilliseconds(durationSlot));
     }
@@ -158,5 +211,41 @@ public class ConfigReader
 
         Console.WriteLine(
             $"Next slot will start at {nextSlotTimestamp} - sleeping for {timeToSleep.TotalMilliseconds} milliseconds...");
+    }
+
+    public bool IsCrashed(string processName)
+    {
+        // Missing time slots in the sequence of F commands correspond to time slots
+        // where there is no change to the normal/crashed state of the previous slot
+
+        uint currentSlot = GetCurrentSlot();
+
+        for (uint i = currentSlot; i > 0; i--)
+        {
+            if (failureDetection.TryGetValue(i, out Dictionary<string, bool>? fCommand))
+            {
+                return fCommand[processName];
+            }
+        }
+
+        return false;
+    }
+
+    public List<string> GetWhoISuspect(string processName)
+    {
+        uint currentSlot = GetCurrentSlot();
+
+        for (uint i = currentSlot; i > 0; i--)
+        {
+            if (failureSuspicions.TryGetValue(i, out Dictionary<string, List<string>>? failureSuspicionsThisSlot))
+            {
+                if (failureSuspicionsThisSlot.TryGetValue(processName, out List<string>? whoISuspect))
+                {
+                    return whoISuspect;
+                }
+            }
+        }
+
+        return new List<string>();
     }
 }

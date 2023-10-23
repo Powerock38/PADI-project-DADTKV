@@ -18,3 +18,5 @@ T 19:27:00
 # Each time slots lasts 10s
 D 10000
 #
+F 1 N N N N N N (TM1,TM2) (LM3,LM2)
+F 2 N N C N N N (TM1,TM2)

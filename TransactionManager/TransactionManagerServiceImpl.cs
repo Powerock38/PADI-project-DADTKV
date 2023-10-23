@@ -7,15 +7,14 @@ namespace TransactionManager;
 
 public class TransactionManagerServiceImpl : TransactionManagerService.TransactionManagerServiceBase
 {
-    private readonly List<TransactionManagerStruct> transactionManagers;
-    private readonly List<LeaseManagerStruct> leaseManagers;
+    private const uint BROADCAST_TIMEOUT = 3;
 
-    public TransactionManagerServiceImpl(string name, List<TransactionManagerStruct> transactionManagers,
-        List<LeaseManagerStruct> leaseManagers)
+    private readonly ConfigReader config;
+
+    public TransactionManagerServiceImpl(string name, ConfigReader config)
     {
         this.name = name;
-        this.transactionManagers = transactionManagers;
-        this.leaseManagers = leaseManagers;
+        this.config = config;
     }
 
     private readonly Dictionary<string, int> dadInts = new();
@@ -29,7 +28,14 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         return leases.Get(name);
     }
 
-    public override Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
+    private uint GetQuorumSize()
+    {
+        // TODO minus 1 because we don't count ourselves?
+        int count = config.transactionManagers.Count - config.GetWhoISuspect(name).Count - 1;
+        return (uint)Math.Ceiling(count * 0.5);
+    }
+
+    public override async Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
         ServerCallContext context)
     {
         List<string> requestReadDadInts = request.ReadDadints.Where(key => !string.IsNullOrEmpty(key)).ToList();
@@ -58,21 +64,22 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
             Console.WriteLine("Requesting lease for: " + DadIntUtils.DadIntsKeysToString(dadIntKeysToRequestLeases));
 
-            foreach (var lm in leaseManagers)
+            foreach (var lm in config.leaseManagers)
             {
                 lm.service!.RequestLeases(leaseRequest);
             }
 
             //TODO: maybe wait for leases to be received instead of aborting the transaction?
-            return Task.FromResult(new TransactionResponse
+            return new TransactionResponse
             {
                 ReadValues = { new DadInt { Key = "abort", Value = 0 } }
-            });
+            };
         }
 
         // Build the response
         TransactionResponse response = new TransactionResponse();
 
+        // Reads first
         foreach (string key in requestReadDadInts)
         {
             if (dadInts.TryGetValue(key, out var val))
@@ -91,7 +98,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             }
         }
 
-        // Update local dadints database (from request.WriteDadints)
+        // Then Writes: update local dadints database (from request.WriteDadints)
         List<DadInt> dadIntsToBroadcast = new();
         foreach (DadInt dadInt in request.WriteDadints)
         {
@@ -102,14 +109,38 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         // Broadcast new or edited dadints (from request.WriteDadints) to all other TMs
         if (dadIntsToBroadcast.Count > 0)
         {
-            foreach (var tm in transactionManagers.Where(tm => tm.name != name))
+            uint nbAcks = 0;
+            uint quorum = GetQuorumSize();
+
+            List<Task<BroadcastDadIntsAck>> tasks = config.transactionManagers.Where(tm => tm.name != name)
+                .Select(tm => tm.service!.BroadcastDadIntsAsync(
+                    new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
+                    deadline: DateTime.Now.AddSeconds(BROADCAST_TIMEOUT)
+                ).ResponseAsync).ToList();
+
+            // Only wait for <quorum> acks
+            while (nbAcks < quorum && tasks.Count > 0)
             {
-                Console.WriteLine("Broadcasting dadints to " + tm.name);
-                tm.service!.BroadcastDadIntsAsync(new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } });
+                Task<BroadcastDadIntsAck> completedTask = await Task.WhenAny(tasks);
+                if (completedTask.IsCompletedSuccessfully && completedTask.Result.Ok)
+                {
+                    nbAcks++;
+                }
+
+                tasks.Remove(completedTask);
+            }
+
+            if (nbAcks < quorum)
+            {
+                Console.WriteLine($"ERROR: only {nbAcks} acks received, quorum is {quorum}");
+                return new TransactionResponse
+                {
+                    ReadValues = { new DadInt { Key = "abort", Value = 0 } }
+                };
             }
         }
 
-        return Task.FromResult(response);
+        return response;
     }
 
     public override Task<Empty> ReceiveAccepted(PaxosAccept accept, ServerCallContext context)
