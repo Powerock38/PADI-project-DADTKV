@@ -113,10 +113,23 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             uint quorum = GetQuorumSize();
 
             List<Task<BroadcastDadIntsAck>> tasks = config.transactionManagers.Where(tm => tm.name != name)
-                .Select(tm => tm.GetService().BroadcastDadIntsAsync(
-                    new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
-                    deadline: DateTime.Now.AddSeconds(BROADCAST_TIMEOUT)
-                ).ResponseAsync).ToList();
+                .Select(tm =>
+                {
+                    try
+                    {
+                        AsyncUnaryCall<BroadcastDadIntsAck>? broadcastCallRes = tm.GetService().BroadcastDadIntsAsync(
+                            new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
+                            deadline: DateTime.Now.AddSeconds(BROADCAST_TIMEOUT)
+                        );
+
+                        return broadcastCallRes.ResponseAsync;
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine($"ERROR: timeout while broadcasting dadints to {tm.name}");
+                        return Task.FromResult(new BroadcastDadIntsAck { Ok = false });
+                    }
+                }).ToList();
 
             // Only wait for <quorum> acks
             while (nbAcks < quorum && tasks.Count > 0)
