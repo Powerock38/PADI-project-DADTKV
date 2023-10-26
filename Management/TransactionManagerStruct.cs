@@ -10,8 +10,7 @@ public class TransactionManagerStruct
 
     private GrpcChannel? channel;
 
-    public TransactionManagerService.TransactionManagerServiceClient? service { get; private set; }
-
+    private TransactionManagerService.TransactionManagerServiceClient? service;
 
     public TransactionManagerStruct(string name, string url)
     {
@@ -19,9 +18,14 @@ public class TransactionManagerStruct
         this.url = url;
     }
 
-    public void openChannelService()
+    public TransactionManagerService.TransactionManagerServiceClient GetService()
     {
-        channel = GrpcChannel.ForAddress(url);
-        service = new TransactionManagerService.TransactionManagerServiceClient(channel);
+        if (service == null)
+        {
+            channel = GrpcChannel.ForAddress(url);
+            service = new TransactionManagerService.TransactionManagerServiceClient(channel);
+        }
+
+        return service;
     }
 }

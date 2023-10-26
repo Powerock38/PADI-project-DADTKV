@@ -10,7 +10,7 @@ public class LeaseManagerStruct
 
     private GrpcChannel? channel;
 
-    public LeaseManagerService.LeaseManagerServiceClient? service { get; private set; }
+    private LeaseManagerService.LeaseManagerServiceClient? service;
 
     public LeaseManagerStruct(string name, string url)
     {
@@ -18,9 +18,14 @@ public class LeaseManagerStruct
         this.url = url;
     }
 
-    public void openChannelService()
+    public LeaseManagerService.LeaseManagerServiceClient GetService()
     {
-        channel = GrpcChannel.ForAddress(url);
-        service = new LeaseManagerService.LeaseManagerServiceClient(channel);
+        if (service == null)
+        {
+            channel = GrpcChannel.ForAddress(url);
+            service = new LeaseManagerService.LeaseManagerServiceClient(channel);
+        }
+
+        return service;
     }
 }

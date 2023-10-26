@@ -18,12 +18,6 @@ string scriptName = config.clients.Find(c => c.name == clientName).script;
 // clients wait 3s before starting, to make sure all servers are up
 Thread.Sleep(3000);
 
-foreach (TransactionManagerStruct tm in config.transactionManagers)
-{
-    tm.openChannelService();
-    // Console.WriteLine($"Connected to {tm.name} {tm.url}");
-}
-
 ClientScript script = new ClientScript($"../../../../Client/scripts/{scriptName}");
 
 // Pick a random TM

@@ -66,7 +66,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
             foreach (var lm in config.leaseManagers)
             {
-                lm.service!.RequestLeases(leaseRequest);
+                lm.GetService().RequestLeases(leaseRequest);
             }
 
             //TODO: maybe wait for leases to be received instead of aborting the transaction?
@@ -113,7 +113,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             uint quorum = GetQuorumSize();
 
             List<Task<BroadcastDadIntsAck>> tasks = config.transactionManagers.Where(tm => tm.name != name)
-                .Select(tm => tm.service!.BroadcastDadIntsAsync(
+                .Select(tm => tm.GetService().BroadcastDadIntsAsync(
                     new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
                     deadline: DateTime.Now.AddSeconds(BROADCAST_TIMEOUT)
                 ).ResponseAsync).ToList();

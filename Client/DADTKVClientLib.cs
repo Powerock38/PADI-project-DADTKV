@@ -23,7 +23,7 @@ public class DADTKVClientLib
             throw new ArgumentException("Invalid dadint key");
         }
 
-        var res = tm.service!.ExecuteTransaction(request);
+        var res = tm.GetService().ExecuteTransaction(request);
 
         if (res.ReadValues.Select(d => d.Key).Contains("abort"))
         {

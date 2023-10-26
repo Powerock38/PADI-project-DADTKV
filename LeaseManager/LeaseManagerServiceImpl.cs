@@ -66,7 +66,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
 
         if (currentSlotLeaseRequests.IsEmpty())
         {
-            Console.WriteLine("Not lease request to process");
+            Console.WriteLine("No lease request to process");
             return;
         }
 
@@ -103,7 +103,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         // Broadcast prepare to all other lease managers
         foreach (var lm in config.leaseManagers.Where(lm => lm.name != name))
         {
-            lm.service!.ReceivePrepareAsync(paxosProposal);
+            lm.GetService().ReceivePrepareAsync(paxosProposal);
         }
     }
 
@@ -123,7 +123,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             var lm = config.leaseManagers.First(lm => lm.name == newProposal.LeaseManagerId);
 
             Console.WriteLine($"PAXOS sending promise to {lm.name}");
-            lm.service!.ReceivePromise(new PaxosPromise
+            lm.GetService().ReceivePromise(new PaxosPromise
             {
                 LeaseManagerId = name,
                 Epoch = newProposal.Epoch,
@@ -176,7 +176,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
                 // Broadcast accept! to ALL lease managers, even itself
                 foreach (var lm in config.leaseManagers)
                 {
-                    lm.service!.ReceiveAcceptAsync(new PaxosAccept
+                    lm.GetService().ReceiveAcceptAsync(new PaxosAccept
                     {
                         Epoch = paxosProposal.Epoch,
                         AcceptedValue = paxosProposedValue.IntoGRPC()
@@ -204,7 +204,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             // Broadcast accepted to all transaction managers
             foreach (var tm in config.transactionManagers)
             {
-                tm.service!.ReceiveAcceptedAsync(accept);
+                tm.GetService().ReceiveAcceptedAsync(accept);
             }
 
             // Ready to start a new round!

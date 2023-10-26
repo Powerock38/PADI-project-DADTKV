@@ -12,26 +12,10 @@ if (args.Length == 0)
 string configPath = args[0];
 string tmName = args[1];
 
-Uri? uri = null;
-
 ConfigReader config = new ConfigReader(configPath);
 
-foreach (TransactionManagerStruct tm in config.transactionManagers)
-{
-    if (tm.name != tmName)
-    {
-        tm.openChannelService();
-    }
-    else
-    {
-        uri = new Uri(tm.url);
-    }
-}
-
-foreach (LeaseManagerStruct lm in config.leaseManagers)
-{
-    lm.openChannelService();
-}
+Uri? uri = config.transactionManagers.Where(tm => tm.name == tmName)
+    .Select(tm => new Uri(tm.url)).FirstOrDefault();
 
 if (uri == null)
 {
