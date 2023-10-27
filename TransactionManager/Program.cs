@@ -37,19 +37,14 @@ server.Start();
 
 config.ReadyWaitForStart();
 
-Action<uint>? loopEverySlot = null;
-loopEverySlot = (_) =>
+config.StartSlotTickingWithAction((_) =>
 {
     if (config.IsCrashed(tmName))
     {
         Console.WriteLine("CRASHED!");
         Environment.Exit(0);
     }
-
-    config.ScheduleForNextSlot(loopEverySlot!);
-};
-
-config.ScheduleForNextSlot(loopEverySlot);
+});
 
 while (true)
 {

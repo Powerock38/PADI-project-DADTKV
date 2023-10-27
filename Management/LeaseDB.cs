@@ -12,7 +12,7 @@ namespace Management;
  */
 public class LeaseDB
 {
-    private readonly SortedDictionary<string, SortedSet<string>> leases = new();
+    private SortedDictionary<string, SortedSet<string>> leases = new();
 
     private void Add(string tmName, IEnumerable<string> dadIntsKeys)
     {
@@ -30,18 +30,11 @@ public class LeaseDB
         }
 
         // Remove duplicates in every other set
-        foreach ((string key, SortedSet<string> value) in leases)
-        {
-            if (key != tmName)
-            {
-                value.ExceptWith(dadIntsKeysList);
+        leases.Where(pair => pair.Key != tmName).ToList().ForEach(pair => pair.Value.ExceptWith(dadIntsKeysList));
 
-                if (value.Count == 0)
-                {
-                    leases.Remove(key);
-                }
-            }
-        }
+        // remove empty sets
+        leases = new SortedDictionary<string, SortedSet<string>>(leases.Where(pair => pair.Value.Count > 0)
+            .ToDictionary(pair => pair.Key, pair => pair.Value));
     }
 
     public void Add(Lease lease)

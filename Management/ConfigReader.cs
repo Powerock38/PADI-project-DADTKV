@@ -196,28 +196,20 @@ public class ConfigReader
 
     private uint GetCurrentSlot()
     {
-        return (uint)Math.Floor((DateTime.Now - tStart) / TimeSpan.FromMilliseconds(durationSlot));
+        // Slots start at 1
+        return (uint)Math.Floor((DateTime.Now - tStart) / TimeSpan.FromMilliseconds(durationSlot)) + 1;
     }
 
-    public void ScheduleForNextSlot(Action<uint> action)
+    public async void StartSlotTickingWithAction(Action<uint> action)
     {
-        uint nextSlot = GetCurrentSlot() + 1;
+        var periodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(durationSlot));
 
-        DateTime nextSlotTimestamp = tStart + TimeSpan.FromMilliseconds(durationSlot * (nextSlot));
-
-        TimeSpan timeToSleep = nextSlotTimestamp - DateTime.Now;
-
-        if (timeToSleep.TotalMilliseconds > 0)
+        do
         {
-            Task.Delay(timeToSleep).ContinueWith(_ =>
-            {
-                Console.WriteLine($"Executing scheduled task for slot {nextSlot}");
-                action(nextSlot);
-            });
-
-            Console.WriteLine(
-                $"Scheduled task for next slot {nextSlot} at {nextSlotTimestamp} (in {timeToSleep.TotalMilliseconds} ms)");
-        }
+            uint slot = GetCurrentSlot();
+            Console.WriteLine($"=========================== NEW SLOT {slot} ===========================");
+            action(slot);
+        } while (await periodicTimer.WaitForNextTickAsync());
     }
 
     public bool IsCrashed(string processName)
