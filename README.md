@@ -11,7 +11,7 @@ The `dotnet` command must be in your $PATH environment variable.
 ```bash
 dotnet build
 cd Management/bin/Debug/net7.0/
-./Management
+./Management <path to config file>
 ```
 
 ### More details:
@@ -29,5 +29,7 @@ At this time it works only if your working directory is `Management/bin/Debug/ne
 This project is developed using JetBrains Rider, not Visual Studio.
 
 ## Usage
+
+A path to a config file must be given as an argument, otherwise it defaults to "config-simple.txt".
 
 All proccesses are killed when entering "q" or "quit" or "exit" or "stop" in the Management console.

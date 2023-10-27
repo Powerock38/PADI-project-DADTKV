@@ -37,12 +37,12 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
 
         Console.WriteLine($"Paxos order = {paxosOrder}");
     }
-    
+
     private uint GetQuorumSize()
     {
-        // TODO minus 1 because we don't count ourselves?
+        // Minus 1 because we don't count ourselves
         int count = config.leaseManagers.Count - config.GetWhoISuspect(name).Count - 1;
-        return (uint)Math.Ceiling(count * 0.5);
+        return (uint)Math.Max(Math.Ceiling(count * 0.5), 0);
     }
 
     public override Task<Empty> RequestLeases(Lease request, ServerCallContext context)
@@ -60,20 +60,17 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         // Check if we are not already in a paxos instance
         if (paxosProposedValue != null)
         {
-            Console.WriteLine("Already in a paxos instance");
             return;
         }
 
         if (currentSlotLeaseRequests.IsEmpty())
         {
-            Console.WriteLine("No lease request to process");
             return;
         }
 
         // Check if I am the leader
         if (slot % config.leaseManagers.Count != paxosOrder)
         {
-            Console.WriteLine($"I am not the leader for slot {slot}");
             return;
         }
 

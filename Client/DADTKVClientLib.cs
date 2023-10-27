@@ -23,19 +23,17 @@ public class DADTKVClientLib
             throw new ArgumentException("Invalid dadint key");
         }
 
-        var res = tm.GetService().ExecuteTransaction(request);
-
-        if (res.ReadValues.Select(d => d.Key).Contains("abort"))
+        TransactionResponse? res = null;
+        try
         {
-            Console.WriteLine("Transaction was aborted!");
+            res = tm.GetService().ExecuteTransaction(request);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            Console.Error.WriteLine("No response from TM, it likely crashed");
         }
 
-        return res.ReadValues;
-    }
-
-    public bool Status()
-    {
-        //TODO
-        return false;
+        return res != null ? res.ReadValues : new List<DadInt>();
     }
 }

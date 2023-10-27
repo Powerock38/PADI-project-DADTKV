@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Management;
 
-Console.WriteLine("MAIN> Management console started");
-
 string configAbsolutePath = Path.GetFullPath(args.Length > 0 ? args[0] : "../../../../config-simple.txt");
+
+Console.WriteLine($"MAIN> Management console started with config: {configAbsolutePath}");
 
 ConfigReader config = new ConfigReader(configAbsolutePath);
 

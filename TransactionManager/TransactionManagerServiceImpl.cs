@@ -7,7 +7,7 @@ namespace TransactionManager;
 
 public class TransactionManagerServiceImpl : TransactionManagerService.TransactionManagerServiceBase
 {
-    private const uint BROADCAST_TIMEOUT = 3;
+    private const uint BROADCAST_TIMEOUT = 5;
 
     private readonly ConfigReader config;
 
@@ -23,6 +23,8 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     private LeaseDB leases = new();
 
+    private int paxosLastAcceptedEpoch = -1;
+
     private SortedSet<string> GetMyLeases()
     {
         return leases.Get(name);
@@ -30,9 +32,9 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     private uint GetQuorumSize()
     {
-        // TODO minus 1 because we don't count ourselves?
+        // Minus 1 because we don't count ourselves
         int count = config.transactionManagers.Count - config.GetWhoISuspect(name).Count - 1;
-        return (uint)Math.Ceiling(count * 0.5);
+        return (uint)Math.Max(Math.Ceiling(count * 0.5), 0);
     }
 
     public override async Task<TransactionResponse> ExecuteTransaction(TransactionRequest request,
@@ -69,7 +71,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
                 lm.GetService().RequestLeases(leaseRequest);
             }
 
-            //TODO: maybe wait for leases to be received instead of aborting the transaction?
+            // Because response from the request is async, we respond to the client with an abort, and it will retry later
             return new TransactionResponse
             {
                 ReadValues = { new DadInt { Key = "abort", Value = 0 } }
@@ -94,7 +96,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
             }
             else
             {
-                Console.WriteLine($"ERROR: {key} not found in dadints");
+                Console.Error.WriteLine($"{key} not found in dadints");
             }
         }
 
@@ -119,14 +121,14 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
                     {
                         AsyncUnaryCall<BroadcastDadIntsAck>? broadcastCallRes = tm.GetService().BroadcastDadIntsAsync(
                             new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
-                            deadline: DateTime.Now.AddSeconds(BROADCAST_TIMEOUT)
+                            deadline: DateTime.UtcNow.AddSeconds(BROADCAST_TIMEOUT)
                         );
 
                         return broadcastCallRes.ResponseAsync;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        Console.WriteLine($"ERROR: timeout while broadcasting dadints to {tm.name}");
+                        Console.Error.WriteLine($"timeout while broadcasting dadints to {tm.name}");
                         return Task.FromResult(new BroadcastDadIntsAck { Ok = false });
                     }
                 }).ToList();
@@ -145,7 +147,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
             if (nbAcks < quorum)
             {
-                Console.WriteLine($"ERROR: only {nbAcks} acks received, quorum is {quorum}");
+                Console.Error.WriteLine($"only {nbAcks} acks received, quorum is {quorum}");
                 return new TransactionResponse
                 {
                     ReadValues = { new DadInt { Key = "abort", Value = 0 } }
@@ -158,14 +160,13 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
 
     public override Task<Empty> ReceiveAccepted(PaxosAccept accept, ServerCallContext context)
     {
-        //TODO: maybe wait for every accept before sending the response to the client? and assert that we have a quorum
-        // https://github.com/cocagne/paxos/blob/master/paxos/essential.py#L162
+        // Improvement idea: wait for every 'accept' before accepting the value, and assert that we have a quorum
+        if (accept.Epoch > paxosLastAcceptedEpoch)
+        {
+            paxosLastAcceptedEpoch = accept.Epoch;
 
-        //TODO: we finally got the lease response, respond to client in waiting?
-
-        leases = LeaseDB.FromGRPC(accept.AcceptedValue);
-
-        Console.WriteLine(leases);
+            leases = LeaseDB.FromGRPC(accept.AcceptedValue);
+        }
 
         return Task.FromResult(new Empty());
     }
