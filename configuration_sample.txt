@@ -28,7 +28,7 @@ P c3 C one_more_script.txt
 S 100
 #
 # this test starts at 12:10:15 (physical wall time)
-T 12:10:15
+T 18:01:30
 #
 # Each time slots lasts 10000 miliseconds
 D 10000 

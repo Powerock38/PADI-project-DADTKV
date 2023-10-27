@@ -43,9 +43,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         List<string> requestReadDadInts = request.ReadDadints.Where(key => !string.IsNullOrEmpty(key)).ToList();
 
         Console.WriteLine(
-            $"Received transaction request from {request.ClientId}: read {DadIntUtils.DadIntsKeysToString(requestReadDadInts)} | write {DadIntUtils.DadIntsToString(request.WriteDadints)}");
-
-        Console.WriteLine($"MY COLLECTION = {DadIntUtils.DadIntsDictionnaryToString(dadInts)}");
+            $"Received transaction request from {request.ClientId}: read {DadIntUtils.DadIntsKeysToString(requestReadDadInts)} | write {DadIntUtils.DadIntsToString(request.WriteDadints)} | my collection is {DadIntUtils.DadIntsDictionnaryToString(dadInts)}");
 
         // For each dadints asked (read or write), we check if TM has a lease for it. If not, TM asks for a lease.
         List<string> dadIntKeysToCheckLeases =
@@ -101,16 +99,9 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
         }
 
         // Then Writes: update local dadints database (from request.WriteDadints)
-        List<DadInt> dadIntsToBroadcast = new();
-        foreach (DadInt dadInt in request.WriteDadints)
+        if (request.WriteDadints.Count > 0)
         {
-            dadInts[dadInt.Key] = dadInt.Value;
-            dadIntsToBroadcast.Add(dadInt);
-        }
-
-        // Broadcast new or edited dadints (from request.WriteDadints) to all other TMs
-        if (dadIntsToBroadcast.Count > 0)
-        {
+            // Broadcast new or edited dadints (from request.WriteDadints) to all other TMs
             uint nbAcks = 0;
             uint quorum = GetQuorumSize();
 
@@ -120,13 +111,13 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
                     try
                     {
                         AsyncUnaryCall<BroadcastDadIntsAck>? broadcastCallRes = tm.GetService().BroadcastDadIntsAsync(
-                            new BroadcastDadIntsMsg { Dadints = { dadIntsToBroadcast } },
+                            new BroadcastDadIntsMsg { Dadints = { request.WriteDadints } },
                             deadline: DateTime.UtcNow.AddSeconds(BROADCAST_TIMEOUT)
                         );
 
                         return broadcastCallRes.ResponseAsync;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         Console.Error.WriteLine($"timeout while broadcasting dadints to {tm.name}");
                         return Task.FromResult(new BroadcastDadIntsAck { Ok = false });
@@ -145,6 +136,7 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
                 tasks.Remove(completedTask);
             }
 
+            // If we fail to get a quorum, we abort
             if (nbAcks < quorum)
             {
                 Console.Error.WriteLine($"only {nbAcks} acks received, quorum is {quorum}");
@@ -152,6 +144,12 @@ public class TransactionManagerServiceImpl : TransactionManagerService.Transacti
                 {
                     ReadValues = { new DadInt { Key = "abort", Value = 0 } }
                 };
+            }
+
+            // If we have a quorum, we commit the transaction to our local copy of the dadints
+            foreach (DadInt dadInt in request.WriteDadints)
+            {
+                dadInts[dadInt.Key] = dadInt.Value;
             }
         }
 

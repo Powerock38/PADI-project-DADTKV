@@ -1,4 +1,5 @@
 using Dadtkv;
+using Grpc.Core;
 using Management;
 
 namespace client;
@@ -16,7 +17,7 @@ public class DADTKVClientLib
     {
         request.ClientId = clientId;
 
-        // Check if 'abort' is not used as a key
+        // Check if 'abort' is not used as a key, or if there is no empty key
         List<string> dadintsKeys = request.ReadDadints.Concat(request.WriteDadints.Select(d => d.Key)).ToList();
         if (dadintsKeys.Contains("abort") || dadintsKeys.Contains(""))
         {
@@ -28,10 +29,10 @@ public class DADTKVClientLib
         {
             res = tm.GetService().ExecuteTransaction(request);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine(ex);
-            Console.Error.WriteLine("No response from TM, it likely crashed");
+            Console.Error.WriteLine($"No response from my TM {tm.name}, it likely crashed. Exiting...");
+            Environment.Exit(1);
         }
 
         return res != null ? res.ReadValues : new List<DadInt>();

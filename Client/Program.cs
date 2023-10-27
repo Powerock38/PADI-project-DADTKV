@@ -15,13 +15,22 @@ ConfigReader config = new ConfigReader(configPath);
 
 string scriptName = config.clients.Find(c => c.name == clientName).script;
 
-// clients wait 3s before starting, to make sure all servers are up
-Thread.Sleep(3000);
-
 ClientScript script = new ClientScript($"../../../../Client/scripts/{scriptName}");
 
-// Pick a random TM
-TransactionManagerStruct myChoosenTM = config.transactionManagers[new Random().Next(config.transactionManagers.Count)];
+// Pick a TM, at random or round-robin deterministically
+bool random = false;
+
+TransactionManagerStruct myChoosenTM;
+if (random)
+{
+    myChoosenTM = config.transactionManagers[new Random().Next(config.transactionManagers.Count)];
+}
+else
+{
+    int i = config.clients.FindIndex(c => c.name == clientName);
+    myChoosenTM = config.transactionManagers[i % config.transactionManagers.Count];
+}
+
 DADTKVClientLib lib = new(myChoosenTM);
 
 config.ReadyWaitForStart();
@@ -30,6 +39,7 @@ while (true)
 {
     TransactionRequest? request = script.runOneLine();
 
+    // If the script asks for a transaction, send it to the TM
     if (request != null)
     {
         IEnumerable<DadInt> dadInts = lib.TxSubmit(clientName, request);

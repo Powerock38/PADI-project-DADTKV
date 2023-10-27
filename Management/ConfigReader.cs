@@ -201,16 +201,23 @@ public class ConfigReader
 
     public void ScheduleForNextSlot(Action<uint> action)
     {
-        uint currentSlot = GetCurrentSlot();
+        uint nextSlot = GetCurrentSlot() + 1;
 
-        DateTime nextSlotTimestamp = tStart + TimeSpan.FromMilliseconds(durationSlot * (currentSlot + 1));
+        DateTime nextSlotTimestamp = tStart + TimeSpan.FromMilliseconds(durationSlot * (nextSlot));
 
         TimeSpan timeToSleep = nextSlotTimestamp - DateTime.Now;
 
-        Task.Delay(timeToSleep).ContinueWith(_ => action(currentSlot + 1));
+        if (timeToSleep.TotalMilliseconds > 0)
+        {
+            Task.Delay(timeToSleep).ContinueWith(_ =>
+            {
+                Console.WriteLine($"Executing scheduled task for slot {nextSlot}");
+                action(nextSlot);
+            });
 
-        Console.WriteLine(
-            $"Next slot will start at {nextSlotTimestamp} - sleeping for {timeToSleep.TotalMilliseconds} milliseconds...");
+            Console.WriteLine(
+                $"Scheduled task for next slot {nextSlot} at {nextSlotTimestamp} (in {timeToSleep.TotalMilliseconds} ms)");
+        }
     }
 
     public bool IsCrashed(string processName)

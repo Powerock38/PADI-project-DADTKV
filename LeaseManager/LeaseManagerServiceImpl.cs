@@ -7,6 +7,16 @@ namespace LeaseManager;
 
 public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBase
 {
+    private const bool paxosLogEnabled = false;
+
+    private static void PaxosLog(string message)
+    {
+        if (paxosLogEnabled)
+        {
+            Console.WriteLine($"[PAXOS] {message}");
+        }
+    }
+
     private readonly ConfigReader config;
     private readonly string name;
 
@@ -34,8 +44,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         this.config = config;
 
         paxosOrder = config.leaseManagers.FindIndex(lm => lm.name == name);
-
-        Console.WriteLine($"Paxos order = {paxosOrder}");
+        PaxosLog($"order = {paxosOrder}");
     }
 
     private uint GetQuorumSize()
@@ -93,7 +102,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             LeaseManagerId = name
         };
 
-        Console.WriteLine($"PAXOS Sending Prepare, epoch={paxosProposal.Epoch}");
+        PaxosLog($"Sending Prepare, epoch={paxosProposal.Epoch}");
 
         paxosNextEpoch++;
 
@@ -108,8 +117,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
     {
         if (newProposal.Epoch >= paxosPromisedEpoch || paxosPromisedEpoch == null)
         {
-            Console.WriteLine(
-                $"PAXOS ReceivePrepare, epoch={newProposal.Epoch}, my promised epoch is {paxosPromisedEpoch}");
+            PaxosLog($"ReceivePrepare, epoch={newProposal.Epoch}, my promised epoch is {paxosPromisedEpoch}");
 
             if (paxosPromisedEpoch == null || newProposal.Epoch > paxosPromisedEpoch)
             {
@@ -119,7 +127,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             // Send promise to proposer
             var lm = config.leaseManagers.First(lm => lm.name == newProposal.LeaseManagerId);
 
-            Console.WriteLine($"PAXOS sending promise to {lm.name}");
+            PaxosLog($"sending promise to {lm.name}");
             lm.GetService().ReceivePromise(new PaxosPromise
             {
                 LeaseManagerId = name,
@@ -130,8 +138,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         }
         else
         {
-            Console.WriteLine(
-                $"PAXOS ReceivePrepare OUTDATED, epoch={newProposal.Epoch}, my promised epoch is {paxosPromisedEpoch}");
+            PaxosLog($"ReceivePrepare OUTDATED, epoch={newProposal.Epoch}, my promised epoch is {paxosPromisedEpoch}");
         }
 
         return Task.FromResult(new Empty());
@@ -139,12 +146,12 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
 
     public override Task<Empty> ReceivePromise(PaxosPromise promise, ServerCallContext context)
     {
-        Console.WriteLine("PAXOS ReceivePromise");
+        PaxosLog("ReceivePromise");
 
         if (promise.Epoch != paxosProposal?.Epoch ||
             paxosPromisesReceivedFrom.Contains(promise.LeaseManagerId))
         {
-            Console.WriteLine("PAXOS ReceivePromise OUTDATED");
+            PaxosLog("ReceivePromise OUTDATED");
             return Task.FromResult(new Empty());
         }
 
@@ -152,8 +159,8 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
 
         uint quorum = GetQuorumSize();
 
-        Console.WriteLine(
-            $"PAXOS ReceivePromise, epoch={promise.Epoch}, quorum is {quorum}, responses={string.Join(", ", paxosPromisesReceivedFrom)}");
+        PaxosLog(
+            $"ReceivePromise, epoch={promise.Epoch}, quorum is {quorum}, responses={string.Join(", ", paxosPromisesReceivedFrom)}");
 
         if (promise.PreviousEpoch > paxosPreviousAcceptedEpoch)
         {
@@ -169,7 +176,7 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
         {
             if (paxosProposedValue != null)
             {
-                Console.WriteLine($"PAXOS ReceivePromise: Broadcasting Accept: {paxosProposedValue}");
+                PaxosLog($"ReceivePromise: Broadcasting Accept: {paxosProposedValue}");
                 // Broadcast accept! to ALL lease managers, even itself
                 foreach (var lm in config.leaseManagers)
                 {
@@ -196,16 +203,15 @@ public class LeaseManagerServiceImpl : LeaseManagerService.LeaseManagerServiceBa
             paxosAcceptedEpoch = accept.Epoch;
             paxosAcceptedValue = LeaseDB.FromGRPC(accept.AcceptedValue);
 
-            Console.WriteLine($"PAXOS ReceiveAccept, epoch={accept.Epoch}, accepting {paxosAcceptedValue}");
+            PaxosLog($"ReceiveAccept, epoch={accept.Epoch}, accepting {paxosAcceptedValue}");
 
-            // Broadcast accepted to all transaction managers
+            // Broadcast accepted to all transaction managers (paxos learners)
             foreach (var tm in config.transactionManagers)
             {
                 tm.GetService().ReceiveAcceptedAsync(accept);
             }
 
             // Ready to start a new round!
-            //TODO: what about the requests that arrived while we were in the paxos instance?
             currentSlotLeaseRequests.Clear();
             leases = paxosAcceptedValue;
             paxosAcceptedValue = null;
